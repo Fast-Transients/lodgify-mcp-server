@@ -6,7 +6,12 @@ This provides a flexible way to start the server with different configurations.
 
 import argparse
 import os
+import signal
 import sys
+
+import httpx
+
+from lodgify_server import mcp
 
 # HTTP status code constants
 HTTP_OK = 200
@@ -19,7 +24,6 @@ def test_api_connection() -> bool:  # noqa: PLR0911
     """Test the Lodgify API connection."""
     print("Testing Lodgify API connection...", file=sys.stderr)
     try:
-        import httpx
         api_key = os.getenv("LODGIFY_API_KEY")
         if not api_key:
             print("❌ Error: LODGIFY_API_KEY not found", file=sys.stderr)
@@ -87,14 +91,11 @@ def run_mcp_server() -> None:
             print("❌ Error: LODGIFY_API_KEY is required for server mode", file=sys.stderr)
             sys.exit(1)
 
-        from lodgify_server import mcp
         print("🚀 Starting Lodgify MCP Server...", file=sys.stderr)
         print("📡 Server is ready to accept MCP protocol messages via stdin/stdout", file=sys.stderr)
         print("🔗 Connect this server to an MCP client like Claude Desktop", file=sys.stderr)
 
         # Set up proper signal handling for graceful shutdown
-        import signal
-
         def signal_handler(signum: int, frame: object) -> None:
             print(
                 f"\n🛑 Received signal {signum}, shutting down gracefully...",

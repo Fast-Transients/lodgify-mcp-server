@@ -11,6 +11,7 @@ Usage:
 """
 
 import os
+import json
 import sys
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -43,17 +44,9 @@ class AppContext:
     client: httpx.AsyncClient
 
 
-@asynccontextmanager
-async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
-    """Manage application lifecycle with Lodgify API client."""
-    api_key = os.getenv("LODGIFY_API_KEY")
-    if not api_key:
-        raise ValueError("LODGIFY_API_KEY environment variable is required")
-
-    config = LodgifyConfig(api_key=api_key)
-
-    # Create HTTP client with proper headers
-    client = httpx.AsyncClient(
+def create_lodgify_client(config: LodgifyConfig) -> httpx.AsyncClient:
+    """Create an httpx.AsyncClient with Lodgify API headers."""
+    return httpx.AsyncClient(
         base_url=config.base_url,
         headers={
             "X-ApiKey": config.api_key,
@@ -62,25 +55,6 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
         },
         timeout=config.timeout,
     )
-
-    try:
-        # Test API connection
-        server.info("Testing Lodgify API connection...")  # type: ignore[attr-defined]
-        response = await client.get("/properties", params={"limit": 1})
-        if response.status_code == HTTP_OK:
-            server.info("✅ Lodgify API connection successful")  # type: ignore[attr-defined]
-        else:
-            server.warning(f"⚠️ API test returned status {response.status_code}")  # type: ignore[attr-defined]
-
-        yield AppContext(config=config, client=client)
-    finally:
-        await client.aclose()
-
-
-# Create the MCP server
-mcp = FastMCP(
-    "Lodgify API Server", dependencies=["httpx>=0.25.0"], lifespan=app_lifespan
-)
 
 
 async def handle_api_error(response: httpx.Response) -> str:
@@ -91,7 +65,7 @@ async def handle_api_error(response: httpx.Response) -> str:
             message = error_data.get("message", f"API Error {response.status_code}")
             code = error_data.get("code", response.status_code)
             return f"Lodgify API Error {code}: {message}"
-    except Exception:
+    except json.JSONDecodeError:
         pass
 
     return f"HTTP {response.status_code}: {response.text[:200]}..."
@@ -127,7 +101,7 @@ async def test_lodgify_api_connection(client: httpx.AsyncClient) -> bool:
 
 # Update the lifespan to set global client
 @asynccontextmanager
-async def app_lifespan_with_global(server: FastMCP) -> AsyncIterator[AppContext]:
+async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
     """Manage application lifecycle with Lodgify API client."""
     global _client  # noqa: PLW0603
 
@@ -138,15 +112,7 @@ async def app_lifespan_with_global(server: FastMCP) -> AsyncIterator[AppContext]
     config = LodgifyConfig(api_key=api_key)
 
     # Create HTTP client with proper headers
-    _client = httpx.AsyncClient(
-        base_url=config.base_url,
-        headers={
-            "X-ApiKey": config.api_key,
-            "Accept": "application/json",
-            "Content-Type": "application/json",
-        },
-        timeout=config.timeout,
-    )
+    _client = create_lodgify_client(config)
 
     try:
         # Test API connection
@@ -163,11 +129,11 @@ async def app_lifespan_with_global(server: FastMCP) -> AsyncIterator[AppContext]
         _client = None
 
 
-# Recreate server with updated lifespan
+# Create server with updated lifespan
 mcp = FastMCP(
     "Lodgify API Server",
     dependencies=["httpx>=0.25.0"],
-    lifespan=app_lifespan_with_global,
+    lifespan=app_lifespan,
 )
 
 

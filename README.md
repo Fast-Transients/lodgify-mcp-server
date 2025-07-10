@@ -65,6 +65,9 @@ If you're developing locally or prefer to run from source:
 - **Linux:** `~/.config/Claude/claude_desktop_config.json`
 
 ## Local Development
+ & Usage
+
+### Setup
 
 Clone and set up the project locally:
 
@@ -74,20 +77,49 @@ cd lodgify-mcp-server
 uv sync
 ```
 
-Run the server:
+### Command-Line Interface
 
-**Windows PowerShell:**
+The server is managed via the `entrypoint.py` script, which provides several modes of operation.
 
+**1. Set your API Key**
+
+First, set your Lodgify API key as an environment variable.
+
+*Windows PowerShell:*
 ```powershell
 $env:LODGIFY_API_KEY="your_api_key_here"
-uv run python entrypoint.py
 ```
 
-**Mac/Linux:**
-
+*Mac/Linux:*
 ```bash
 export LODGIFY_API_KEY="your_api_key_here"
-uv run python entrypoint.py
+```
+
+Alternatively, you can pass the key directly using the `--api-key` flag in the commands below.
+
+**2. Run the Server (Default Mode)**
+
+This starts the MCP server, ready to connect to a client like Claude Desktop.
+
+```bash
+# --mode server is the default and can be omitted
+uv run python entrypoint.py --mode server
+```
+
+**3. Test the API Connection**
+
+Verify that your `LODGIFY_API_KEY` is correct and can connect to the Lodgify API.
+
+```bash
+uv run python entrypoint.py --mode test
+```
+
+**4. Display Server Information**
+
+Show information about the server and check if the API key is configured.
+
+```bash
+uv run python entrypoint.py --mode info
 ```
 
 ## Testing with MCP Inspector

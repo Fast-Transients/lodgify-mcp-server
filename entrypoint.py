@@ -11,7 +11,11 @@ import sys
 
 import httpx
 
-from lodgify_server import LodgifyConfig, test_lodgify_api_connection
+from lodgify_server import (
+    LodgifyConfig,
+    create_lodgify_client,
+    test_lodgify_api_connection,
+)
 
 API_KEY_MASK_LENGTH = 4
 
@@ -24,15 +28,7 @@ async def run_test_api_connection() -> bool:
         return False
 
     config = LodgifyConfig(api_key=api_key)
-    async with httpx.AsyncClient(
-        base_url=config.base_url,
-        headers={
-            "X-ApiKey": config.api_key,
-            "Accept": "application/json",
-            "Content-Type": "application/json",
-        },
-        timeout=config.timeout,
-    ) as client:
+    async with create_lodgify_client(config) as client:
         return await test_lodgify_api_connection(client)
 
 
@@ -137,19 +133,18 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Set environment variables
-    if args.api_key:
-        os.environ["LODGIFY_API_KEY"] = args.api_key
-
     if args.debug:
         os.environ["PYTHONPATH"] = "/app"
         print("Debug mode enabled", file=sys.stderr)
         print(f"API key set: {'Yes' if args.api_key else 'No'}", file=sys.stderr)
         print(f"Mode: {args.mode}", file=sys.stderr)
 
+    if args.api_key:
+        os.environ["LODGIFY_API_KEY"] = args.api_key
+
     # Validate API key for modes that need it
-    if args.mode in ["server", "test"] and not args.api_key:
-        api_key = os.getenv("LODGIFY_API_KEY")
-        if not api_key:
+    if args.mode in ["server", "test"]:
+        if not os.getenv("LODGIFY_API_KEY"):
             print("❌ Error: API key is required for this mode", file=sys.stderr)
             print(
                 "   Use --api-key or set LODGIFY_API_KEY environment variable",

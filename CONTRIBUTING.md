@@ -12,13 +12,17 @@ Thank you for considering contributing to the Lodgify MCP Server! To get started
 
    This installs the server in editable mode along with testing tools.
 
-2. **Run the test suite**
+2. **Run pre-commit checks**
 
-   Make sure the tests pass before opening a pull request:
+   Ensure code passes linting, type checking and tests:
 
    ```bash
+   ruff check .
+   mypy .
    pytest
    ```
+
+   The CI will run the same commands, so it's best to verify locally first.
 
 3. **Code style**
 

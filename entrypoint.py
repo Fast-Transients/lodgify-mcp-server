@@ -5,78 +5,37 @@ This provides a flexible way to start the server with different configurations.
 """
 
 import argparse
+import asyncio
 import os
 import sys
 
-# HTTP status code constants
-HTTP_OK = 200
-HTTP_UNAUTHORIZED = 401
-HTTP_FORBIDDEN = 403
-HTTP_SERVER_ERROR = 500
-API_KEY_MASK_LENGTH = 8
+from lodgify_server import test_lodgify_api_connection, LodgifyConfig
+import httpx
 
-def test_api_connection() -> bool:  # noqa: PLR0911
-    """Test the Lodgify API connection."""
-    print("Testing Lodgify API connection...", file=sys.stderr)
-    try:
-        import httpx
-        api_key = os.getenv("LODGIFY_API_KEY")
-        if not api_key:
-            print("❌ Error: LODGIFY_API_KEY not found", file=sys.stderr)
-            print("   Please set the LODGIFY_API_KEY environment variable", file=sys.stderr)
-            return False
 
-        if api_key.lower() in ['test', 'test123', 'dummy', 'fake']:
-            print(f"⚠️  Warning: Using test API key '{api_key}' - this will fail", file=sys.stderr)
+async def run_test_api_connection() -> bool:
+    api_key = os.getenv("LODGIFY_API_KEY")
+    if not api_key:
+        print("❌ Error: LODGIFY_API_KEY not found", file=sys.stderr)
+        print("   Please set the LODGIFY_API_KEY environment variable", file=sys.stderr)
+        return False
 
-        headers = {
-            "X-ApiKey": api_key,
+    config = LodgifyConfig(api_key=api_key)
+    async with httpx.AsyncClient(
+        base_url=config.base_url,
+        headers={
+            "X-ApiKey": config.api_key,
+            "Accept": "application/json",
             "Content-Type": "application/json"
-        }
+        },
+        timeout=config.timeout
+    ) as client:
+        return await test_lodgify_api_connection(client)
 
-        print(f"🔑 Using API key: {api_key[:API_KEY_MASK_LENGTH]}{'*' * (len(api_key) - API_KEY_MASK_LENGTH)}", file=sys.stderr)
 
-        response = httpx.get(
-            "https://api.lodgify.com/v2/properties?limit=1",
-            headers=headers,
-            timeout=10
-        )
+def test_api_connection() -> bool:
+    return asyncio.run(run_test_api_connection())
 
-        if response.status_code == HTTP_OK:
-            print("✅ Lodgify API connection successful", file=sys.stderr)
-            data = response.json()
-            if isinstance(data, dict) and 'items' in data:
-                count = len(data['items'])
-                print(f"   Found {count} properties in account", file=sys.stderr)
-            return True
-        elif response.status_code == HTTP_UNAUTHORIZED:
-            print("❌ API connection failed: Invalid API key", file=sys.stderr)
-            print("   Please check your LODGIFY_API_KEY is correct", file=sys.stderr)
-            return False
-        elif response.status_code == HTTP_FORBIDDEN:
-            print("❌ API connection failed: Access forbidden", file=sys.stderr)
-            print("   Please check your API key permissions", file=sys.stderr)
-            return False
-        elif response.status_code >= HTTP_SERVER_ERROR:
-            print(f"❌ API connection failed: Server error ({response.status_code})", file=sys.stderr)
-            print("   Lodgify API appears to be having issues", file=sys.stderr)
-            return False
-        else:
-            print(f"❌ API connection failed with status {response.status_code}", file=sys.stderr)
-            try:
-                error_data = response.json()
-                if isinstance(error_data, dict) and 'message' in error_data:
-                    print(f"   Error: {error_data['message']}", file=sys.stderr)
-            except Exception:
-                print(f"   Response: {response.text[:200]}...", file=sys.stderr)
-            return False
-    except httpx.TimeoutException:
-        print("❌ API connection error: Request timed out", file=sys.stderr)
-        print("   Please check your internet connection", file=sys.stderr)
-        return False
-    except Exception as e:
-        print(f"❌ API connection error: {e}", file=sys.stderr)
-        return False
 
 def run_mcp_server() -> None:
     """Run the MCP server."""

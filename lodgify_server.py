@@ -108,6 +108,20 @@ def get_client() -> httpx.AsyncClient:
     return _client
 
 
+async def test_lodgify_api_connection(client: httpx.AsyncClient) -> bool:
+    """Test the Lodgify API connection."""
+    try:
+        response = await client.get("/properties", params={"limit": 1})
+        response.raise_for_status()  # Raise an exception for 4xx/5xx responses
+        return True
+    except httpx.HTTPStatusError as e:
+        print(f"API connection failed with status {e.response.status_code}", file=sys.stderr)
+        return False
+    except httpx.RequestError as e:
+        print(f"API connection error: {e}", file=sys.stderr)
+        return False
+
+
 # Update the lifespan to set global client
 @asynccontextmanager
 async def app_lifespan_with_global(server: FastMCP) -> AsyncIterator[AppContext]:
@@ -133,11 +147,11 @@ async def app_lifespan_with_global(server: FastMCP) -> AsyncIterator[AppContext]
     try:
         # Test API connection
         print("Testing Lodgify API connection...", file=sys.stderr)
-        response = await _client.get("/properties", params={"limit": 1})
-        if response.status_code == HTTP_OK:
+        if await test_lodgify_api_connection(_client):
             print("Lodgify API connection successful", file=sys.stderr)
         else:
-            print(f"API test returned status {response.status_code}", file=sys.stderr)
+            print("Lodgify API connection failed", file=sys.stderr)
+            sys.exit(1) # Exit if API connection fails
 
         yield AppContext(config=config, client=_client)
     finally:

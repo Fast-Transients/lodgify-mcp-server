@@ -32,7 +32,7 @@ jobs:
       run: uv run ruff check .
     
     - name: Type check with mypy
-      run: uv run mypy ./ || true  # Allow to fail for now
+      run: uv run mypy ./
     
     - name: Test import
       run: uv run python -c "import lodgify_server; print('Import successful')"

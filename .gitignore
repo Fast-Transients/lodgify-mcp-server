@@ -25,3 +25,6 @@ logs/
 
 # Documentation (project notes, not public docs)
 docs/
+
+# Gemini configuration
+.gemini/

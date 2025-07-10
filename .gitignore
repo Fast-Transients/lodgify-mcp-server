@@ -28,3 +28,4 @@ docs/
 
 # Gemini configuration
 .gemini/
+commit_message.txt

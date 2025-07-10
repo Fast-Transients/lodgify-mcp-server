@@ -1,12 +1,27 @@
 # Lodgify MCP Server
 
-A Model Context Protocol (MCP) server for the Lodgify vacation rental API. Provides tools for managing properties, bookings, and calendar data.
+A Model Context Protocol (MCP) server for the Lodgify vacation rental API. It exposes tools for managing properties, bookings and calendar data.
 
-## Claude Desktop Integration
+## Quick start
+Install dependencies with `uv` and run the server with `uvx`:
 
-### 🚀 Recommended Method (uvx)
+```bash
+export LODGIFY_API_KEY=your_api_key
+uvx lodgify-mcp-server
+```
 
-Add this to your Claude Desktop configuration:
+To run from source:
+
+```bash
+git clone https://github.com/fast-transients/lodgify-mcp-server.git
+cd lodgify-mcp-server
+uv sync
+export LODGIFY_API_KEY=your_api_key
+uv run python entrypoint.py
+```
+
+## Claude Desktop configuration
+Add this block to your Claude Desktop configuration (see examples in the `examples/` folder):
 
 ```json
 {
@@ -15,7 +30,7 @@ Add this to your Claude Desktop configuration:
       "command": "uvx",
       "args": ["lodgify-mcp-server"],
       "env": {
-        "LODGIFY_API_KEY": "your_api_key_here"
+        "LODGIFY_API_KEY": "your_api_key"
       }
     }
   }
@@ -161,92 +176,14 @@ uvx lodgify-mcp-server
 
 - **Properties**: `get_properties`, `get_property_by_id`
 - **Bookings**: `get_bookings`, `get_booking_by_id`, `create_booking`, `update_booking_status`
-- **Calendar**: `get_calendar` (availability checking)
+- **Calendar**: `get_calendar`
 
 ## Troubleshooting
-
-### Getting "LODGIFY_API_KEY environment variable is required" error?
-
-This means you need to set your API key before running the server:
-
-**Windows PowerShell:**
-
-```powershell
-$env:LODGIFY_API_KEY="your_actual_api_key_here"
-uvx lodgify-mcp-server
-```
-
-**Mac/Linux:**
-
-```bash
-export LODGIFY_API_KEY="your_actual_api_key_here"
-uvx lodgify-mcp-server
-```
-
-### Getting "spawn uvx ENOENT" error?
-
-This means uvx is not installed or not in PATH. Install it:
-
-**Windows:**
-
-```powershell
-# Install uv first, then uvx is included
-powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-```
-
-**Mac/Linux:**
-
-```bash
-# Install uv (includes uvx)
-curl -LsSf https://astral.sh/uv/install.sh | sh
-source ~/.bashrc  # or restart terminal
-```
-
-**Alternative**: Use local installation instead:
-
-```bash
-git clone https://github.com/fast-transients/lodgify-mcp-server.git
-cd lodgify-mcp-server
-uv sync
-export LODGIFY_API_KEY="your_api_key_here"
-uv run python entrypoint.py
-```
-
-### Getting "spawn uv ENOENT" error on Mac?
-
-Claude Desktop can't find the `uv` command. Fix the PATH:
-
-```bash
-# Add to ~/.zshrc (or ~/.bashrc)
-echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
-source ~/.zshrc
-```
-
-Then restart Claude Desktop.
-
-### API key is required error?
-
-Make sure you've set your LODGIFY_API_KEY environment variable with a valid API key from your Lodgify account.
+- Ensure the `LODGIFY_API_KEY` environment variable is set.
+- Getting `spawn uvx ENOENT`? Install `uv` from [astral.sh/uv](https://astral.sh/uv/) and restart your shell.
 
 ## Security
-
-After syncing dependencies with `uv sync`, run `pip-audit` to scan for known
-vulnerabilities:
-
-```bash
-uv sync
-pip-audit
-```
-
-This repository pins `starlette` to version 0.47.0 in `uv.lock` to address
-upstream advisories.
-
-## Links
-
-- [Lodgify API Docs](https://docs.lodgify.com/)
-- [MCP Protocol](https://modelcontextprotocol.io/)
-- [GitHub Issues](https://github.com/fast-transients/lodgify-mcp-server/issues)
+After syncing dependencies, run `pip-audit` to check for known vulnerabilities. The `uv.lock` file pins `starlette` 0.47.0 to address upstream advisories.
 
 ## Contributing
-
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and testing instructions.

@@ -9,8 +9,11 @@ import asyncio
 import os
 import sys
 
-from lodgify_server import test_lodgify_api_connection, LodgifyConfig
 import httpx
+
+from lodgify_server import LodgifyConfig, test_lodgify_api_connection
+
+API_KEY_MASK_LENGTH = 4
 
 
 async def run_test_api_connection() -> bool:
@@ -26,9 +29,9 @@ async def run_test_api_connection() -> bool:
         headers={
             "X-ApiKey": config.api_key,
             "Accept": "application/json",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
-        timeout=config.timeout
+        timeout=config.timeout,
     ) as client:
         return await test_lodgify_api_connection(client)
 
@@ -43,13 +46,22 @@ def run_mcp_server() -> None:
         # Ensure we have an API key for server mode
         api_key = os.getenv("LODGIFY_API_KEY")
         if not api_key:
-            print("❌ Error: LODGIFY_API_KEY is required for server mode", file=sys.stderr)
+            print(
+                "❌ Error: LODGIFY_API_KEY is required for server mode", file=sys.stderr
+            )
             sys.exit(1)
 
         from lodgify_server import mcp
+
         print("🚀 Starting Lodgify MCP Server...", file=sys.stderr)
-        print("📡 Server is ready to accept MCP protocol messages via stdin/stdout", file=sys.stderr)
-        print("🔗 Connect this server to an MCP client like Claude Desktop", file=sys.stderr)
+        print(
+            "📡 Server is ready to accept MCP protocol messages via stdin/stdout",
+            file=sys.stderr,
+        )
+        print(
+            "🔗 Connect this server to an MCP client like Claude Desktop",
+            file=sys.stderr,
+        )
 
         # Set up proper signal handling for graceful shutdown
         import signal
@@ -74,22 +86,37 @@ def run_mcp_server() -> None:
         print(f"❌ Server error: {e}", file=sys.stderr)
         sys.exit(1)
 
+
 def show_info() -> None:
     """Show information about the MCP server."""
     print("🏨 Lodgify MCP Server", file=sys.stderr)
     print("=" * 40, file=sys.stderr)
-    print("📋 This is a Model Context Protocol (MCP) server for the Lodgify API.", file=sys.stderr)
-    print("🏨 It provides tools and resources for managing vacation rental properties.", file=sys.stderr)
+    print(
+        "📋 This is a Model Context Protocol (MCP) server for the Lodgify API.",
+        file=sys.stderr,
+    )
+    print(
+        "🏨 It provides tools and resources for managing vacation rental properties.",
+        file=sys.stderr,
+    )
 
-    api_key = os.getenv('LODGIFY_API_KEY')
+    api_key = os.getenv("LODGIFY_API_KEY")
     if api_key:
-        masked_key = api_key[:API_KEY_MASK_LENGTH] + '*' * (len(api_key) - API_KEY_MASK_LENGTH) if len(api_key) > API_KEY_MASK_LENGTH else '*' * len(api_key)
+        masked_key = (
+            api_key[:API_KEY_MASK_LENGTH] + "*" * (len(api_key) - API_KEY_MASK_LENGTH)
+            if len(api_key) > API_KEY_MASK_LENGTH
+            else "*" * len(api_key)
+        )
         print(f"🔑 API key configured: Yes ({masked_key})", file=sys.stderr)
     else:
         print("🔑 API key configured: ❌ No", file=sys.stderr)
 
-    print("\n📖 To use this server, connect it to an MCP client like Claude Desktop.", file=sys.stderr)
+    print(
+        "\n📖 To use this server, connect it to an MCP client like Claude Desktop.",
+        file=sys.stderr,
+    )
     print("🔌 The server communicates via JSON-RPC over stdin/stdout.", file=sys.stderr)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -99,17 +126,13 @@ if __name__ == "__main__":
         "--mode",
         choices=["test", "server", "info"],
         default="server",
-        help="Operation mode: test API connection, run MCP server, or show info"
+        help="Operation mode: test API connection, run MCP server, or show info",
     )
     parser.add_argument(
         "--api-key",
-        help="Lodgify API key (can also be set via LODGIFY_API_KEY env var)"
+        help="Lodgify API key (can also be set via LODGIFY_API_KEY env var)",
     )
-    parser.add_argument(
-        "--debug",
-        action="store_true",
-        help="Enable debug mode"
-    )
+    parser.add_argument("--debug", action="store_true", help="Enable debug mode")
 
     args = parser.parse_args()
 
@@ -128,7 +151,10 @@ if __name__ == "__main__":
         api_key = os.getenv("LODGIFY_API_KEY")
         if not api_key:
             print("❌ Error: API key is required for this mode", file=sys.stderr)
-            print("   Use --api-key or set LODGIFY_API_KEY environment variable", file=sys.stderr)
+            print(
+                "   Use --api-key or set LODGIFY_API_KEY environment variable",
+                file=sys.stderr,
+            )
             sys.exit(1)
 
     if args.mode == "test":

@@ -29,6 +29,7 @@ PROPERTIES_SUMMARY_LIMIT = 10
 @dataclass
 class LodgifyConfig:
     """Configuration for Lodgify API access."""
+
     api_key: str
     base_url: str = "https://api.lodgify.com/v2"
     timeout: int = 30
@@ -37,6 +38,7 @@ class LodgifyConfig:
 @dataclass
 class AppContext:
     """Application context with Lodgify client."""
+
     config: LodgifyConfig
     client: httpx.AsyncClient
 
@@ -56,9 +58,9 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
         headers={
             "X-ApiKey": config.api_key,
             "Accept": "application/json",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
-        timeout=config.timeout
+        timeout=config.timeout,
     )
 
     try:
@@ -77,9 +79,7 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
 
 # Create the MCP server
 mcp = FastMCP(
-    "Lodgify API Server",
-    dependencies=["httpx>=0.25.0"],
-    lifespan=app_lifespan
+    "Lodgify API Server", dependencies=["httpx>=0.25.0"], lifespan=app_lifespan
 )
 
 
@@ -115,7 +115,10 @@ async def test_lodgify_api_connection(client: httpx.AsyncClient) -> bool:
         response.raise_for_status()  # Raise an exception for 4xx/5xx responses
         return True
     except httpx.HTTPStatusError as e:
-        print(f"API connection failed with status {e.response.status_code}", file=sys.stderr)
+        print(
+            f"API connection failed with status {e.response.status_code}",
+            file=sys.stderr,
+        )
         return False
     except httpx.RequestError as e:
         print(f"API connection error: {e}", file=sys.stderr)
@@ -136,12 +139,13 @@ async def app_lifespan_with_global(server: FastMCP) -> AsyncIterator[AppContext]
 
     # Create HTTP client with proper headers
     _client = httpx.AsyncClient(
-        base_url=config.base_url,        headers={
+        base_url=config.base_url,
+        headers={
             "X-ApiKey": config.api_key,
             "Accept": "application/json",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
-        timeout=config.timeout
+        timeout=config.timeout,
     )
 
     try:
@@ -151,7 +155,7 @@ async def app_lifespan_with_global(server: FastMCP) -> AsyncIterator[AppContext]
             print("Lodgify API connection successful", file=sys.stderr)
         else:
             print("Lodgify API connection failed", file=sys.stderr)
-            sys.exit(1) # Exit if API connection fails
+            sys.exit(1)  # Exit if API connection fails
 
         yield AppContext(config=config, client=_client)
     finally:
@@ -163,11 +167,12 @@ async def app_lifespan_with_global(server: FastMCP) -> AsyncIterator[AppContext]
 mcp = FastMCP(
     "Lodgify API Server",
     dependencies=["httpx>=0.25.0"],
-    lifespan=app_lifespan_with_global
+    lifespan=app_lifespan_with_global,
 )
 
 
 # RESOURCES - Expose data for LLM context
+
 
 @mcp.resource("lodgify://properties")
 async def get_properties_list() -> str:
@@ -187,7 +192,9 @@ async def get_properties_list() -> str:
         # Format for LLM consumption
         summary = ["# Lodgify Properties Summary\n"]
 
-        for prop in properties_data[:PROPERTIES_SUMMARY_LIMIT]:  # Limit to first 10 for overview
+        for prop in properties_data[
+            :PROPERTIES_SUMMARY_LIMIT
+        ]:  # Limit to first 10 for overview
             summary.append(f"## Property ID: {prop.get('id', 'N/A')}")
             summary.append(f"- **Name**: {prop.get('name', 'N/A')}")
             summary.append(f"- **Type**: {prop.get('property_type', 'N/A')}")
@@ -197,7 +204,9 @@ async def get_properties_list() -> str:
             summary.append("")
 
         if len(properties_data) > PROPERTIES_SUMMARY_LIMIT:
-            summary.append(f"... and {len(properties_data) - PROPERTIES_SUMMARY_LIMIT} more properties.")
+            summary.append(
+                f"... and {len(properties_data) - PROPERTIES_SUMMARY_LIMIT} more properties."
+            )
 
         return "\n".join(summary)
 
@@ -227,17 +236,19 @@ async def get_property_details(property_id: str) -> str:
         details.append(f"**Bedrooms**: {property_data.get('bedrooms', 'N/A')}")
         details.append(f"**Bathrooms**: {property_data.get('bathrooms', 'N/A')}")
 
-        if property_data.get('description'):
+        if property_data.get("description"):
             details.append(f"\n**Description**: {property_data['description']}")
 
-        if property_data.get('address'):
+        if property_data.get("address"):
             details.append(f"\n**Address**: {property_data['address']}")
 
         # Add room types if available
-        if property_data.get('room_types'):
+        if property_data.get("room_types"):
             details.append("\n## Room Types:")
-            for room in property_data['room_types']:
-                details.append(f"- **{room.get('name', 'N/A')}** (ID: {room.get('id', 'N/A')})")
+            for room in property_data["room_types"]:
+                details.append(
+                    f"- **{room.get('name', 'N/A')}** (ID: {room.get('id', 'N/A')})"
+                )
                 details.append(f"  - Max Guests: {room.get('max_guests', 'N/A')}")
                 details.append(f"  - Base Rate: {room.get('base_rate', 'N/A')}")
 
@@ -269,11 +280,15 @@ async def get_recent_bookings() -> str:
         for booking in bookings:
             summary.append(f"## Booking ID: {booking.get('id', 'N/A')}")
             summary.append(f"- **Guest**: {booking.get('guest_name', 'N/A')}")
-            summary.append(f"- **Property**: {booking.get('property_name', booking.get('property_id', 'N/A'))}")
+            summary.append(
+                f"- **Property**: {booking.get('property_name', booking.get('property_id', 'N/A'))}"
+            )
             summary.append(f"- **Arrival**: {booking.get('arrival', 'N/A')}")
             summary.append(f"- **Departure**: {booking.get('departure', 'N/A')}")
             summary.append(f"- **Status**: {booking.get('status', 'N/A')}")
-            summary.append(f"- **Total**: {booking.get('total_amount', 'N/A')} {booking.get('currency_code', '')}")
+            summary.append(
+                f"- **Total**: {booking.get('total_amount', 'N/A')} {booking.get('currency_code', '')}"
+            )
             summary.append("")
 
         return "\n".join(summary)
@@ -286,12 +301,10 @@ async def get_recent_bookings() -> str:
 
 # TOOLS - Execute actions
 
+
 @mcp.tool()
 async def get_properties(
-    ctx: Context,
-    limit: int = 50,
-    offset: int = 0,
-    status: str | None = None
+    ctx: Context, limit: int = 50, offset: int = 0, status: str | None = None
 ) -> dict[str, Any]:
     """
     Get a list of properties with optional filtering.
@@ -314,7 +327,7 @@ async def get_properties(
         return {
             "success": True,
             "data": response.json(),
-            "message": f"Retrieved {limit} properties (offset: {offset})"
+            "message": f"Retrieved {limit} properties (offset: {offset})",
         }
 
     except httpx.HTTPStatusError as e:
@@ -341,7 +354,7 @@ async def get_property_by_id(ctx: Context, property_id: int) -> dict[str, Any]:
         return {
             "success": True,
             "data": response.json(),
-            "message": f"Retrieved property {property_id}"
+            "message": f"Retrieved property {property_id}",
         }
 
     except httpx.HTTPStatusError as e:
@@ -359,7 +372,7 @@ async def get_bookings(
     property_id: int | None = None,
     status: str | None = None,
     start_date: str | None = None,
-    end_date: str | None = None
+    end_date: str | None = None,
 ) -> dict[str, Any]:
     """
     Get bookings with optional filtering.
@@ -374,7 +387,7 @@ async def get_bookings(
     """
     client = get_client()
 
-    params: dict[str, Any] = {"size": size, "page": page }
+    params: dict[str, Any] = {"size": size, "page": page}
     if property_id:
         params["property_id"] = property_id
     if status:
@@ -391,7 +404,7 @@ async def get_bookings(
         return {
             "success": True,
             "data": response.json(),
-            "message": f"Retrieved bookings with filters: {params}"
+            "message": f"Retrieved bookings with filters: {params}",
         }
 
     except httpx.HTTPStatusError as e:
@@ -416,7 +429,7 @@ async def create_booking(
     total: float = 0.0,
     currency_code: str = "USD",
     status: str = "Booked",
-    source_text: str = "MCP API"
+    source_text: str = "MCP API",
 ) -> dict[str, Any]:
     """
     Create a new booking.
@@ -443,7 +456,7 @@ async def create_booking(
             "name": guest_name,
             "email": guest_email,
             "phone": guest_phone,
-            "country_code": guest_country_code
+            "country_code": guest_country_code,
         },
         "status": status,
         "property_id": property_id,
@@ -454,13 +467,7 @@ async def create_booking(
         "total": total,
         "currency_code": currency_code,
         "source_text": source_text,
-        "rooms": [
-            {
-                "room_type_id": room_type_id,
-                "people": people,
-                "key_code": ""
-            }
-        ]
+        "rooms": [{"room_type_id": room_type_id, "people": people, "key_code": ""}],
     }
 
     try:
@@ -470,7 +477,7 @@ async def create_booking(
         return {
             "success": True,
             "data": response.json(),
-            "message": f"Created booking for {guest_name} at property {property_id}"
+            "message": f"Created booking for {guest_name} at property {property_id}",
         }
 
     except httpx.HTTPStatusError as e:
@@ -486,7 +493,7 @@ async def get_calendar(
     property_id: int,
     room_type_id: int | None = None,
     start_date: str | None = None,
-    end_date: str | None = None
+    end_date: str | None = None,
 ) -> dict[str, Any]:
     """
     Get calendar/availability information for a property.
@@ -514,7 +521,7 @@ async def get_calendar(
         return {
             "success": True,
             "data": response.json(),
-            "message": f"Retrieved calendar for property {property_id}"
+            "message": f"Retrieved calendar for property {property_id}",
         }
 
     except httpx.HTTPStatusError as e:
@@ -541,7 +548,7 @@ async def get_booking_by_id(ctx: Context, booking_id: int) -> dict[str, Any]:
         return {
             "success": True,
             "data": response.json(),
-            "message": f"Retrieved booking {booking_id}"
+            "message": f"Retrieved booking {booking_id}",
         }
 
     except httpx.HTTPStatusError as e:
@@ -553,9 +560,7 @@ async def get_booking_by_id(ctx: Context, booking_id: int) -> dict[str, Any]:
 
 @mcp.tool()
 async def update_booking_status(
-    ctx: Context,
-    booking_id: int,
-    status: str
+    ctx: Context, booking_id: int, status: str
 ) -> dict[str, Any]:
     """
     Update the status of an existing booking.
@@ -576,13 +581,15 @@ async def update_booking_status(
         booking_data["status"] = status
 
         # Send the update
-        response = await client.put(f"/reservations/bookings/{booking_id}", json=booking_data)
+        response = await client.put(
+            f"/reservations/bookings/{booking_id}", json=booking_data
+        )
         response.raise_for_status()
 
         return {
             "success": True,
             "data": response.json(),
-            "message": f"Updated booking {booking_id} status to {status}"
+            "message": f"Updated booking {booking_id} status to {status}",
         }
 
     except httpx.HTTPStatusError as e:
@@ -593,6 +600,7 @@ async def update_booking_status(
 
 
 # PROMPTS - Interactive templates
+
 
 @mcp.prompt()
 def analyze_lodgify_data() -> list[base.Message]:
@@ -642,5 +650,7 @@ def property_management_review() -> list[base.Message]:
 def main() -> None:
     """Run the Lodgify MCP server."""
     mcp.run()
+
+
 if __name__ == "__main__":
     main()

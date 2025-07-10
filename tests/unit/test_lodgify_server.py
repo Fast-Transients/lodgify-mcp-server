@@ -24,7 +24,9 @@ def test_get_client_not_initialized(monkeypatch: MonkeyPatch) -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_properties_success(httpx_mock: HTTPXMock, monkeypatch: MonkeyPatch) -> None:
+async def test_get_properties_success(
+    httpx_mock: HTTPXMock, monkeypatch: MonkeyPatch
+) -> None:
     client = httpx.AsyncClient(base_url="https://api.lodgify.com/v2")
     monkeypatch.setattr(lodgify_server, "_client", client)
     httpx_mock.add_response(

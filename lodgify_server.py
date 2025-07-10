@@ -15,6 +15,7 @@ import sys
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
+from datetime import date
 from typing import Any
 
 import httpx
@@ -578,6 +579,93 @@ async def update_booking_status(
         return {"success": False, "error": str(e)}
 
 
+@mcp.tool()
+async def get_occupancy_summary(
+    ctx: Context,
+    property_id: int,
+    start_date: str,
+    end_date: str
+) -> dict[str, Any]:
+    """
+    Get occupancy summary, average rental rate, and total revenue for a property
+    within a specified date range.
+
+    Args:
+        property_id: The property ID
+        start_date: Start date for analysis (YYYY-MM-DD)
+        end_date: End date for analysis (YYYY-MM-DD)
+    """
+    try:
+        # Fetch calendar data
+        calendar_response = await get_calendar(
+            ctx,
+            property_id=property_id,
+            start_date=start_date,
+            end_date=end_date
+        )
+
+        if not calendar_response["success"]:
+            return {"success": False, "error": f"Failed to retrieve calendar data: {calendar_response['error']}"}
+
+        calendar_data = calendar_response["data"]
+        if not calendar_data:
+            return {"success": True, "data": {}, "message": "No calendar data found for the specified period."}
+
+        total_days = 0
+        occupied_days = 0
+        total_revenue = 0.0
+        total_available_rate = 0.0
+        available_days_with_rate = 0
+
+        # Parse dates
+        try:
+            s_date = date.fromisoformat(start_date)
+            e_date = date.fromisoformat(end_date)
+        except ValueError as e:
+            return {"success": False, "error": f"Invalid date format: {e}"}
+
+        # Iterate through each day in the calendar data
+        for day_data in calendar_data:
+            try:
+                day = date.fromisoformat(day_data["date"])
+            except ValueError as e:
+                return {"success": False, "error": f"Invalid date format in calendar data: {e}"}
+            if s_date <= day <= e_date:
+                total_days += 1
+                if day_data.get("status") == "Booked":
+                    occupied_days += 1
+                    total_revenue += day_data.get("price", 0.0)
+                elif day_data.get("status") == "Available" and day_data.get("price") is not None:
+                    total_available_rate += day_data["price"]
+                    available_days_with_rate += 1
+
+        occupancy_rate = (occupied_days / total_days) * 100 if total_days > 0 else 0
+        average_rental_rate = (total_revenue + total_available_rate) / (occupied_days + available_days_with_rate) if (occupied_days + available_days_with_rate) > 0 else 0
+
+        summary = {
+            "property_id": property_id,
+            "start_date": start_date,
+            "end_date": end_date,
+            "total_days_in_period": total_days,
+            "occupied_days": occupied_days,
+            "occupancy_rate": f"{occupancy_rate:.2f}%",
+            "total_revenue": f"{total_revenue:.2f}",
+            "average_rental_rate": f"{average_rental_rate:.2f}"
+        }
+
+        return {
+            "success": True,
+            "data": summary,
+            "message": "Occupancy summary generated successfully."
+        }
+
+    except httpx.HTTPStatusError as e:
+        error_msg = await handle_api_error(e.response)
+        return {"success": False, "error": error_msg}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
 # PROMPTS - Interactive templates
 
 @mcp.prompt()
@@ -591,6 +679,18 @@ def analyze_lodgify_data() -> list[base.Message]:
             "3. Revenue optimization opportunities\n"
             "4. Guest demographics and preferences\n\n"
             "Use the available Lodgify tools to gather current data and provide insights."
+        )
+    ]
+
+
+@mcp.prompt()
+def analyze_occupancy_data_prompt() -> list[base.Message]:
+    """
+    Analyze occupancy data for a specific property and date range.
+    """
+    return [
+        base.UserMessage(
+            "I want to analyze occupancy data for a property. Please provide the property ID, start date (YYYY-MM-DD), and end date (YYYY-MM-DD)."
         )
     ]
 

@@ -1,9 +1,9 @@
+from typing import Any
+
 import httpx
 import pytest
 from pytest import MonkeyPatch
 from pytest_httpx import HTTPXMock
-
-from typing import Any
 
 import lodgify_server
 
@@ -46,7 +46,7 @@ async def test_get_properties_success(httpx_mock: HTTPXMock, monkeypatch: Monkey
 @pytest.mark.asyncio
 async def test_get_occupancy_summary_invalid_date_format(monkeypatch: MonkeyPatch) -> None:
     # Mock get_calendar to prevent actual API calls
-    
+
 
     # Mock get_calendar to return a successful response with valid data
     async def mock_get_calendar(*args: Any, **kwargs: Any) -> dict[str, Any]:

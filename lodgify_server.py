@@ -580,7 +580,7 @@ async def update_booking_status(
 
 
 @mcp.tool()
-async def get_occupancy_summary(
+async def get_occupancy_summary(  # noqa: PLR0911
     ctx: Context,
     property_id: int,
     start_date: str,

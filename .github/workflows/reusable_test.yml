@@ -1,0 +1,50 @@
+name: Reusable Test Workflow
+
+on:
+  workflow_call:
+    inputs:
+      python-version:
+        required: true
+        type: string
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install uv
+      uses: astral-sh/setup-uv@v2
+      with:
+        enable-cache: true
+        cache-dependency-glob: "uv.lock"
+    
+    - name: Set up Python ${{ inputs.python-version }}
+      run: uv python install ${{ inputs.python-version }}
+    
+    - name: Install dependencies
+      run: uv sync --all-extras --dev
+    
+    - name: Lint with ruff
+      run: uv run ruff check .
+    
+    - name: Type check with mypy
+      run: uv run mypy ./
+    
+    - name: Test import
+      run: uv run python -c "import lodgify_server; print('Import successful')"
+    
+    - name: Test entrypoint script
+      run: |
+        export LODGIFY_API_KEY="test-key-for-import-only"
+        # Test info mode (should work without real API key)
+        uv run python entrypoint.py --mode info
+        
+        # Test that server module loads
+        uv run python -c "
+        import lodgify_server
+        print('Server module loaded successfully')
+        " || true
+
+    - name: Run tests
+      run: uv run python -m pytest -q
